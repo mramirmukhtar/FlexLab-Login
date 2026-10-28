@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  Страница входа FlexLab на GitHub Pages: https://mramirmukhtar.github.io/FlexLab-Login/
+  Лежит в публичном репозитории FlexLab-Login как index.html; здесь — её исходник.
+
+  GitHub после «Authorize» возвращает человека только на заранее известный
+  адрес — сюда. А программа FlexLab живёт по адресу, который каждый раз новый
+  (127.0.0.1 у хоста, *.trycloudflare.com у гостя). Эта страница берёт из
+  state, куда вернуть, и сразу отправляет туда код входа. Сама она ничего не
+  хранит и ни с кем не говорит. Отправляет только на адреса программы; код без
+  второй половины, которая есть лишь у начавшей вход программы (PKCE), никому
+  не нужен.
+-->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-n9EIc/AOTUy4g3lWbZI8qvPa/QXcODQQpJ27tLb9wgw='; style-src 'unsafe-inline'">
+<meta name="referrer" content="no-referrer">
+<title>FlexLab — вход</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #14101f; color: #e9e6f5; font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 420px; padding: 24px; text-align: center; }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  p { margin: 0; color: #a9a3c4; }
+</style>
+</head>
+<body>
+<main><h1>FlexLab</h1><p id="say">Возвращаю в FlexLab…</p></main>
+<script>
+(function () {
+  var say = document.getElementById("say");
+  var query = new URLSearchParams(location.search);
+  var state = query.get("state") || "";
+  // state: <случайная часть>.<адрес программы в base64url>
+  var dot = state.indexOf(".");
+  var target = null;
+  try {
+    var raw = state.slice(dot + 1).replace(/-/g, "+").replace(/_/g, "/");
+    target = new URL(atob(raw + "===".slice((raw.length + 3) % 4)));
+  } catch (error) { target = null; }
+  var allowed = target && target.pathname === "/api/github/callback" && !target.search && !target.hash && !target.username && !target.password && (
+    (target.protocol === "http:" && (target.hostname === "127.0.0.1" || target.hostname === "localhost")) ||
+    (target.protocol === "https:" && /^[a-z0-9-]+\.trycloudflare\.com$/.test(target.hostname) && !target.port));
+  if (dot < 1 || !allowed) { say.textContent = "Эта ссылка входа не от FlexLab. Вернись в программу и нажми «Войти через GitHub» ещё раз."; return; }
+  var back = new URLSearchParams();
+  back.set("state", state);
+  if (query.get("code")) back.set("code", query.get("code"));
+  if (query.get("error")) back.set("error", query.get("error"));
+  location.replace(target.origin + target.pathname + "?" + back.toString());
+})();
+</script>
+</body>
+</html>
